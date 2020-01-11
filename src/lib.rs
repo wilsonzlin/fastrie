@@ -83,9 +83,8 @@ impl<V> FastrieBuilderNode<V> {
         out.push(0xFF);
       };
     };
-    match last_cluster_next_cluster_dist_pos {
-      Some(out_pos) => out[out_pos] = 0,
-      _ => {}
+    if let Some(out_pos) = last_cluster_next_cluster_dist_pos {
+      out[out_pos] = 0
     };
 
     for cluster in &child_char_clusters {
@@ -126,7 +125,7 @@ impl<V> Fastrie<V> {
         value_idx = node_value_idx - 1;
       };
       if i == text.len() || self.data[node_pos + 2] == 0 {
-        // First cluster has zero as distance to next cluster, meaning this node has no children.
+        // There is no more text to match or this node has no children.
         break;
       };
       let c = text[i];
