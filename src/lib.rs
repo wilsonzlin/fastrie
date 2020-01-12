@@ -43,6 +43,11 @@ fn read_idx(data: &Vec<u8>, pos: usize) -> usize {
     decode_idx(&data[pos..pos + IDX_BYTES])
 }
 
+pub struct FastrieBuild<V> {
+    pub values: Vec<V>,
+    pub data: Vec<u8>,
+}
+
 impl<V> FastrieBuilderNode<V> {
     pub fn new() -> FastrieBuilderNode<V> {
         FastrieBuilderNode { built: false, value: None, children: HashMap::new() }
@@ -137,10 +142,15 @@ impl<V> FastrieBuilderNode<V> {
         };
     }
 
-    pub fn build(&mut self) -> Fastrie<V> {
+    pub fn prebuild(&mut self) -> FastrieBuild<V> {
         let mut data: Vec<u8> = Vec::new();
         let mut values: Vec<V> = Vec::new();
         self._build(&mut data, &mut values);
+        FastrieBuild { values, data }
+    }
+
+    pub fn build(&mut self) -> Fastrie<V> {
+        let FastrieBuild { values, data } = self.prebuild();
         Fastrie { values, data }
     }
 }
