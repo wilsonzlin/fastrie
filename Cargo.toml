@@ -1,6 +1,6 @@
 [package]
 name = "fastrie"
-description = "Memory-packed tries, buildable at compile time"
+description = "Sequentialised memory-packed associative tries, buildable at compile time, useful for longest prefix matching"
 license = "MIT"
 homepage = "https://github.com/wilsonzlin/fastrie"
 version = "0.0.1"
