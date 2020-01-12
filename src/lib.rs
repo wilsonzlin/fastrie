@@ -59,7 +59,7 @@ impl<V> FastrieBuilderNode<V> {
         current.value = Some(value);
     }
 
-    fn _serialise(&mut self, data: &mut Vec<u8>, values: &mut Vec<V>) -> () {
+    fn _build(&mut self, data: &mut Vec<u8>, values: &mut Vec<V>) -> () {
         assert!(!self.built);
         self.built = true;
 
@@ -131,7 +131,7 @@ impl<V> FastrieBuilderNode<V> {
                 if let Some(c) = c {
                     write_idx(data, *replace_with_child_indices.get(c).unwrap(), data.len());
                     let child_node = self.children.get_mut(c).unwrap();
-                    child_node._serialise(data, values);
+                    child_node._build(data, values);
                 };
             };
         };
@@ -140,7 +140,7 @@ impl<V> FastrieBuilderNode<V> {
     pub fn build(&mut self) -> Fastrie<V> {
         let mut data: Vec<u8> = Vec::new();
         let mut values: Vec<V> = Vec::new();
-        self._serialise(&mut data, &mut values);
+        self._build(&mut data, &mut values);
         Fastrie { values, data }
     }
 }
@@ -156,6 +156,10 @@ pub struct FastrieMatch<'v, V> {
 }
 
 impl<V> Fastrie<V> {
+    pub fn precomputed(values: Vec<V>, data: Vec<u8>) -> Fastrie<V> {
+        Fastrie { values, data }
+    }
+
     pub fn memory_size(&self) -> usize {
         self.data.len()
     }

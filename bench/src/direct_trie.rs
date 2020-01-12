@@ -10,8 +10,8 @@ pub struct DirectTrieNodeMatch<'v, V> {
 
 impl<V> DirectTrieNode<V> {
     pub fn new() -> DirectTrieNode<V> {
-        let mut node = DirectTrieNode { value: None, children: Vec::with_capacity(128) };
-        for _ in 0..128 {
+        let mut node = DirectTrieNode { value: None, children: Vec::with_capacity(256) };
+        for _ in 0..256 {
             node.children.push(None);
         };
         node
