@@ -161,7 +161,7 @@ pub struct FastrieMatch<'v, V> {
 }
 
 impl<V> Fastrie<'_, '_, V> {
-    pub fn from_prebuilt<'v, 'd>(values: &'v [V], data: &'d [u8]) -> Fastrie<'v, 'd, V> {
+    pub const fn from_prebuilt<'v, 'd>(values: &'v [V], data: &'d [u8]) -> Fastrie<'v, 'd, V> {
         Fastrie { values, data }
     }
 
