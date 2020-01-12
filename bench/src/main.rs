@@ -23,10 +23,6 @@ fn read_json<T>(name: &str) -> T where for<'de> T: Deserialize<'de> {
 }
 
 fn main() {
-    let mut test_code = Vec::<u8>::new();
-    let mut test_file = File::open("entities.html").unwrap();
-    test_file.read_to_end(&mut test_code).unwrap();
-
     let entities: HashMap<String, Entity> = read_json("entities");
     let mut fastrie_builder: FastrieBuilderNode<String> = FastrieBuilderNode::new();
     let mut hashmap_trie: HashMapTrieNode<String> = HashMapTrieNode::new();
