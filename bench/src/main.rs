@@ -1,4 +1,4 @@
-use fastrie::FastrieBuilderNode;
+use fastrie::{Fastrie, FastrieBuilderNode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
@@ -43,7 +43,8 @@ fn test_large() {
         hashmap_trie.add(&rep.as_bytes(), characters.clone());
         direct_trie.add(&rep.as_bytes(), characters.clone());
     };
-    let fastrie = fastrie_builder.build();
+    let fastrie_built = fastrie_builder.prebuild();
+    let fastrie = Fastrie::from_prebuilt(fastrie_built.values.as_slice(), fastrie_built.data.as_slice());
 
     time!("fastrie", fastrie.memory_size(), {
         for _ in 0..100 {
@@ -81,7 +82,8 @@ fn test_small() {
         hashmap_trie.add(v, true);
         direct_trie.add(v, true);
     };
-    let fastrie = fastrie_builder.build();
+    let fastrie_built = fastrie_builder.prebuild();
+    let fastrie = Fastrie::from_prebuilt(fastrie_built.values.as_slice(), fastrie_built.data.as_slice());
 
     time!("fastrie", fastrie.memory_size(), {
         for _ in 0..100000 {

@@ -39,7 +39,7 @@ fn push_idx(vec: &mut Vec<u8>, idx: usize) -> () {
     vec.extend_from_slice(&encode_idx(idx))
 }
 
-fn read_idx(data: &Vec<u8>, pos: usize) -> usize {
+fn read_idx(data: &[u8], pos: usize) -> usize {
     decode_idx(&data[pos..pos + IDX_BYTES])
 }
 
@@ -148,16 +148,11 @@ impl<V> FastrieBuilderNode<V> {
         self._build(&mut data, &mut values);
         FastrieBuild { values, data }
     }
-
-    pub fn build(&mut self) -> Fastrie<V> {
-        let FastrieBuild { values, data } = self.prebuild();
-        Fastrie { values, data }
-    }
 }
 
-pub struct Fastrie<V> {
-    values: Vec<V>,
-    data: Vec<u8>,
+pub struct Fastrie<'v, 'd, V> {
+    values: &'v [V],
+    data: &'d [u8],
 }
 
 pub struct FastrieMatch<'v, V> {
@@ -165,8 +160,8 @@ pub struct FastrieMatch<'v, V> {
     pub value: &'v V,
 }
 
-impl<V> Fastrie<V> {
-    pub fn precomputed(values: Vec<V>, data: Vec<u8>) -> Fastrie<V> {
+impl<V> Fastrie<'_, '_, V> {
+    pub fn from_prebuilt<'v, 'd>(values: &'v [V], data: &'d [u8]) -> Fastrie<'v, 'd, V> {
         Fastrie { values, data }
     }
 
