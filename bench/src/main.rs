@@ -2,7 +2,6 @@ use fastrie::FastrieBuilderNode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Read;
 use std::time::Instant;
 
 use crate::direct_trie::DirectTrieNode;
