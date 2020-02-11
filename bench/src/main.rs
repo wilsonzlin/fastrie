@@ -10,6 +10,8 @@ use crate::hashmap_trie::HashMapTrieNode;
 mod hashmap_trie;
 mod direct_trie;
 
+include!(concat!(env!("OUT_DIR"), "/phf_map.rs"));
+
 #[derive(Serialize, Deserialize)]
 struct Entity {
     codepoints: Vec<u32>,
@@ -36,18 +38,23 @@ fn test_large() {
     let mut fastrie_builder: FastrieBuilderNode<String> = FastrieBuilderNode::new();
     let mut hashmap_trie: HashMapTrieNode<String> = HashMapTrieNode::new();
     let mut direct_trie: DirectTrieNode<String> = DirectTrieNode::new();
+    let mut hashmap: HashMap<&[u8], String> = HashMap::new();
     let mut entity_reps: Vec<Vec<u8>> = Vec::new();
     for (rep, Entity { characters, .. }) in entities.iter() {
         entity_reps.push(rep.as_bytes().to_vec());
         fastrie_builder.add(&rep.as_bytes(), characters.clone());
         hashmap_trie.add(&rep.as_bytes(), characters.clone());
         direct_trie.add(&rep.as_bytes(), characters.clone());
+        hashmap.insert(&rep.as_bytes(), characters.clone());
     };
     let fastrie_built = fastrie_builder.prebuild();
     let fastrie = Fastrie::from_prebuilt(fastrie_built.values.as_slice(), fastrie_built.data.as_slice());
 
+    let iterations = 1000;
+    println!("{} iterations", iterations);
+
     time!("fastrie", fastrie.memory_size(), {
-        for _ in 0..100 {
+        for _ in 0..iterations {
             for rep in entity_reps.iter() {
                 let _ = fastrie.longest_matching_prefix(rep.as_slice());
             };
@@ -55,7 +62,7 @@ fn test_large() {
     });
 
     time!("hashmap_trie", hashmap_trie.memory_size(), {
-        for _ in 0..100 {
+        for _ in 0..iterations {
             for rep in entity_reps.iter() {
                 let _ = hashmap_trie.longest_matching_prefix(rep.as_slice());
             };
@@ -63,9 +70,25 @@ fn test_large() {
     });
 
     time!("direct_trie", direct_trie.memory_size(), {
-        for _ in 0..100 {
+        for _ in 0..iterations {
             for rep in entity_reps.iter() {
                 let _ = direct_trie.longest_matching_prefix(rep.as_slice());
+            };
+        };
+    });
+
+    time!("hashmap", 0, {
+        for _ in 0..iterations {
+            for rep in entity_reps.iter() {
+                let _ = hashmap.get(rep.as_slice());
+            };
+        };
+    });
+
+    time!("phf_map", 0, {
+        for _ in 0..iterations {
+            for rep in entity_reps.iter() {
+                let _ = STATIC_MAP.get(rep.as_slice());
             };
         };
     });
@@ -85,8 +108,11 @@ fn test_small() {
     let fastrie_built = fastrie_builder.prebuild();
     let fastrie = Fastrie::from_prebuilt(fastrie_built.values.as_slice(), fastrie_built.data.as_slice());
 
+    let iterations = 100000;
+    println!("{} iterations", iterations);
+
     time!("fastrie", fastrie.memory_size(), {
-        for _ in 0..100000 {
+        for _ in 0..iterations {
             for v in values.iter() {
                 let _ = fastrie.longest_matching_prefix(v);
             };
@@ -94,7 +120,7 @@ fn test_small() {
     });
 
     time!("hashmap_trie", hashmap_trie.memory_size(), {
-        for _ in 0..100000 {
+        for _ in 0..iterations {
             for v in values.iter() {
                 let _ = hashmap_trie.longest_matching_prefix(v);
             };
@@ -102,7 +128,7 @@ fn test_small() {
     });
 
     time!("direct_trie", direct_trie.memory_size(), {
-        for _ in 0..100000 {
+        for _ in 0..iterations {
             for v in values.iter() {
                 let _ = direct_trie.longest_matching_prefix(v);
             };
@@ -110,7 +136,7 @@ fn test_small() {
     });
 
     time!("manual", 0, {
-        for _ in 0..100000 {
+        for _ in 0..iterations {
             for v in values.iter() {
                 match v.get(0) {
                     Some(b'a') => match v.get(1) {
