@@ -38,8 +38,7 @@ impl IndexWidth {
   fn read_idx(self, data: &[u8], pos: usize) -> usize {
       let mut idx = 0usize;
       for i in 0..self.0 {
-        idx <<= 8;
-        idx |= data[pos + i] as usize;
+        idx |= (data[pos + i] as usize) << (8 * i);
       }
       idx
   }
@@ -181,7 +180,7 @@ pub struct FastrieMatch<'v, V> {
 /// ```
 /// use fastrie::*;
 ///
-/// let mut builder = FastrieBuilderNode::new(IndexWidth(1));
+/// let mut builder = FastrieBuilderNode::new(IndexWidth(2));
 /// builder.add(b"hell", 1);
 /// builder.add(b"hello", 2);
 /// builder.add(b"world", 4);
@@ -210,7 +209,7 @@ impl<V> Fastrie<'_, '_, V> {
     /// ```
     /// use fastrie::*;
     ///
-    /// let mut builder = FastrieBuilderNode::new(IndexWidth(1));
+    /// let mut builder = FastrieBuilderNode::new(IndexWidth(3));
     /// builder.add(b"hell", 1);
     /// builder.add(b"hello", 2);
     /// builder.add(b"world", 4);
