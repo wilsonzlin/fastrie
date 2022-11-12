@@ -7,5 +7,3 @@ version = "0.1.0"
 authors = ["Wilson Lin <code@wilsonl.in>"]
 include = ["/src/**/*", "/Cargo.toml", "/LICENSE", "/README.md"]
 edition = "2018"
-
-[dependencies]
