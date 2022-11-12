@@ -151,65 +151,126 @@ impl<V> FastrieBuilderNode<V> {
 }
 
 pub struct Fastrie<'v, 'd, V> {
-    values: &'v [V],
+    // If None, keys are used as a set.
+    values: Option<&'v [V]>,
     data: &'d [u8],
 }
 
 pub struct FastrieMatch<'v, V> {
+    /// Inclusive.
     pub end: usize,
     pub value: &'v V,
 }
 
+
+/// # Example
+///
+/// ```
+/// use fastrie::*;
+///
+/// let mut builder = FastrieBuilderNode::new();
+/// builder.add(b"hell", 1);
+/// builder.add(b"hello", 2);
+/// builder.add(b"world", 4);
+/// let build = builder.prebuild();
+///
+/// // `build.data` can be written as bytes to a file, or embedded directly into code as a literal byte array/slice.
+///
+/// let trie = from_prebuilt_without_values(&build.data);
+/// assert!(trie.contains_key(b"hell"));
+/// assert!(trie.contains_key(b"hello"));
+/// assert!(trie.contains_key(b"world"));
+/// assert!(!trie.contains_key(b"worl"));
+/// assert!(!trie.contains_key(b"worlds"));
+/// ```
+pub const fn from_prebuilt_without_values<'d>(data: &'d [u8]) -> Fastrie<'_, 'd, ()> {
+  Fastrie { values: None, data }
+}
+
 impl<V> Fastrie<'_, '_, V> {
+    /// # Example
+    ///
+    /// ```
+    /// use fastrie::*;
+    ///
+    /// let mut builder = FastrieBuilderNode::new();
+    /// builder.add(b"hell", 1);
+    /// builder.add(b"hello", 2);
+    /// builder.add(b"world", 4);
+    /// let build = builder.prebuild();
+    ///
+    /// // `build.data` can be written as bytes to a file, or embedded directly into code as a literal byte array/slice.
+    ///
+    /// let trie = Fastrie::from_prebuilt(&build.values, &build.data);
+    /// assert!(trie.contains_key(b"hello"));
+    /// let query = b"hello world!";
+    /// let mat = trie.longest_matching_prefix(query).unwrap();
+    /// assert_eq!(mat.end, 4);
+    /// assert_eq!(&query[..=mat.end], b"hello");
+    /// assert_eq!(mat.value, &2);
+    /// let query = b"hell's kitchen";
+    /// let mat = trie.longest_matching_prefix(query).unwrap();
+    /// assert_eq!(mat.end, 3);
+    /// assert_eq!(&query[..=mat.end], b"hell");
+    /// assert_eq!(mat.value, &1);
+    /// ```
     pub const fn from_prebuilt<'v, 'd>(values: &'v [V], data: &'d [u8]) -> Fastrie<'v, 'd, V> {
-        Fastrie { values, data }
+        Fastrie { values: Some(values), data }
     }
 
     pub fn memory_size(&self) -> usize {
         self.data.len()
     }
 
+    fn _longest_matching_prefix(&self, text: &[u8]) -> Option<(usize, usize)> {
+      let mut node_pos: usize = 0;
+      let mut match_opt: Option<(usize, usize)> = None;
+      'outer: for (i, &c) in text.iter().enumerate() {
+          if self.data[node_pos + IDX_BYTES] == 0 {
+              // This node has no children.
+              break;
+          };
+
+          let mut cluster_pos: usize = node_pos + IDX_BYTES + 1;
+          loop {
+              let next_cluster_pos = read_idx(&self.data, cluster_pos);
+              let cluster_min: u8 = self.data[cluster_pos + IDX_BYTES];
+              let cluster_max: u8 = self.data[cluster_pos + IDX_BYTES + 1];
+              if c >= cluster_min && c <= cluster_max {
+                  // Character is in this cluster, but it might point to a gap.
+                  node_pos = read_idx(&self.data, cluster_pos + IDX_BYTES + 2 + ((c - cluster_min) as usize) * IDX_BYTES);
+                  if node_pos == 0 {
+                      // Character is not a child, as child node index is zero which means it's a gap.
+                      break 'outer;
+                  } else {
+                      break;
+                  };
+              };
+              if next_cluster_pos == 0 {
+                  // Next cluster index is zero, which means this is last cluster.
+                  break 'outer;
+              };
+              cluster_pos = next_cluster_pos;
+          };
+
+          // Get value of child node.
+          let node_value_idx: usize = read_idx(&self.data, node_pos);
+          if node_value_idx != 0 {
+              match_opt = Some((i, node_value_idx - 1));
+          };
+      };
+
+      match_opt
+    }
+
+    pub fn contains_key(&self, key: &[u8]) -> bool {
+      self._longest_matching_prefix(key).filter(|(i, _)| *i == key.len() - 1).is_some()
+    }
+
     pub fn longest_matching_prefix(&self, text: &[u8]) -> Option<FastrieMatch<V>> {
-        let mut node_pos: usize = 0;
-        let mut match_opt: Option<FastrieMatch<V>> = None;
-        'outer: for (i, &c) in text.iter().enumerate() {
-            if self.data[node_pos + IDX_BYTES] == 0 {
-                // This node has no children.
-                break;
-            };
-
-            let mut cluster_pos: usize = node_pos + IDX_BYTES + 1;
-            loop {
-                let next_cluster_pos = read_idx(&self.data, cluster_pos);
-                let cluster_min: u8 = self.data[cluster_pos + IDX_BYTES];
-                let cluster_max: u8 = self.data[cluster_pos + IDX_BYTES + 1];
-                if c >= cluster_min && c <= cluster_max {
-                    // Character is in this cluster, but it might point to a gap.
-                    node_pos = read_idx(&self.data, cluster_pos + IDX_BYTES + 2 + ((c - cluster_min) as usize) * IDX_BYTES);
-                    if node_pos == 0 {
-                        // Character is not a child, as child node index is zero which means it's a gap.
-                        break 'outer;
-                    } else {
-                        break;
-                    };
-                };
-                if next_cluster_pos == 0 {
-                    // Next cluster index is zero, which means this is last cluster.
-                    break 'outer;
-                };
-                cluster_pos = next_cluster_pos;
-            };
-
-            // Get value of child node.
-            let node_value_idx: usize = read_idx(&self.data, node_pos);
-            if node_value_idx != 0 {
-                match_opt = Some(FastrieMatch {
-                    end: i,
-                    value: &self.values[node_value_idx - 1],
-                });
-            };
-        };
-
-        match_opt
+      self._longest_matching_prefix(text).map(|(end, value_idx)| FastrieMatch {
+          end,
+          value: &self.values.unwrap()[value_idx],
+      })
     }
 }
